@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Ban } from 'lucide-react'
 import { db, newVisitId } from '../db/database'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { addDaysIso, isSunday, joinList, todayIso, weekdayName } from '../lib/dates'
@@ -35,9 +36,17 @@ export function Visits() {
   const noVisit = sunday || offDay
   const camps = lists?.values ?? []
 
+  const campDoctors = useMemo(() => {
+    if (!camp) return EMPTY_DOCTORS
+    return doctors
+      .filter((d) => d.camp === camp)
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [doctors, camp])
+
   const selectedDoctors = useMemo(
-    () => doctors.filter((d) => selected.includes(d.id)),
-    [doctors, selected],
+    () => campDoctors.filter((d) => selected.includes(d.id)),
+    [campDoctors, selected],
   )
   const pharmacies = useMemo(() => {
     const names = selectedDoctors.map((d) => d.attachedPharmacy.trim()).filter(Boolean)
@@ -87,84 +96,103 @@ export function Visits() {
   }
 
   const minDate = todayIso()
+  const doctorCount = selectedDoctors.length
+  const pharmacyCount = pharmacies.length
 
   return (
     <section className="page visits">
-      <label>
-        Date
-        <input
-          type="date"
-          min={minDate}
-          value={date}
-          onChange={(e) => {
-            const v = e.target.value
-            if (v && v >= minDate) {
-              setDate(v)
-              setOffDay(false)
+      <div className="visit-toolbar">
+        <label className="visit-date">
+          <span className="visit-field-head">
+            Date
+            <span className="day-meta">
+              {weekday}
+              {sunday ? ' · no visit' : ''}
+            </span>
+          </span>
+          <input
+            type="date"
+            min={minDate}
+            value={date}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v && v >= minDate) {
+                setDate(v)
+                setOffDay(false)
+                setError('')
+              }
+            }}
+          />
+        </label>
+
+        <label className="visit-camp">
+          <span className="visit-field-head">Camp</span>
+          <select
+            value={camp}
+            onChange={(e) => {
+              setCamp(e.target.value)
+              setSelected([])
               setError('')
-            }
-          }}
-        />
-      </label>
+            }}
+          >
+            <option value="">Select</option>
+            {camps.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <p className="day-meta">
-        {weekday}
-        {sunday ? ' · no visit' : ''}
-      </p>
-
-      {!sunday && (
-        <button
-          type="button"
-          className={`chip holiday-toggle ${offDay ? 'chip--on' : ''}`}
-          onClick={() => {
-            setOffDay((v) => !v)
-            setError('')
-          }}
-        >
-          Mark as Holiday/Leave (no visit today)
-        </button>
-      )}
+        {!sunday && (
+          <button
+            type="button"
+            className={`visit-off ${offDay ? 'on' : ''}`}
+            aria-pressed={offDay}
+            aria-label="Mark as Holiday/Leave (no visit today)"
+            title="Holiday/Leave"
+            onClick={() => {
+              setOffDay((v) => !v)
+              setError('')
+            }}
+          >
+            <Ban size={20} />
+          </button>
+        )}
+      </div>
 
       {!noVisit && (
         <>
-          <label>
-            Camp
-            <select value={camp} onChange={(e) => setCamp(e.target.value)}>
-              <option value="">Select</option>
-              {camps.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-
           <div className="picker">
             <p className="picker-label">Doctors</p>
             <div className="picker-pane">
-              {doctors
-                .slice()
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    className={`picker-item ${selected.includes(d.id) ? 'on' : ''}`}
-                    onClick={() => toggle(d)}
-                  >
-                    {d.name}
-                    <span className="muted">{d.area}</span>
-                  </button>
-                ))}
-              {doctors.length === 0 && <p className="muted">No active doctors</p>}
+              {!camp && <p className="muted pad">Select a camp to see doctors</p>}
+              {camp &&
+                campDoctors.map((d) => {
+                  const on = selected.includes(d.id)
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      className={`picker-item ${on ? 'on' : ''}`}
+                      onClick={() => toggle(d)}
+                    >
+                      <input type="checkbox" checked={on} readOnly tabIndex={-1} />
+                      <span className="picker-name">{d.name}</span>
+                      <span className="muted">{d.area}</span>
+                    </button>
+                  )
+                })}
+              {camp && campDoctors.length === 0 && (
+                <p className="muted pad">No active doctors in this camp</p>
+              )}
             </div>
           </div>
 
           <div className="preview">
             <p>
-              <strong>{selectedDoctors.length}</strong> doctors
-              {' · '}
-              <strong>{pharmacies.length}</strong> pharmacies
+              {doctorCount} doctor{doctorCount === 1 ? '' : 's'} · {pharmacyCount}{' '}
+              {pharmacyCount === 1 ? 'pharmacy' : 'pharmacies'} selected
             </p>
             {selectedDoctors.length > 0 && (
               <p className="muted">{selectedDoctors.map((d) => d.name).join('; ')}</p>
