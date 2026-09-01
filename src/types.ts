@@ -85,5 +85,3 @@ export type OutboxItem = {
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'offline' | 'error'
-
-export type VisitKind = 'working' | 'Sunday' | 'Holiday' | 'Leave'

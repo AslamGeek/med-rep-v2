@@ -1,15 +1,25 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 
 type Props = {
+  id: string
   label: string
   options: string[]
   selected: string[]
+  open: boolean
+  onOpenChange: (id: string | null) => void
   onChange: (next: string[]) => void
 }
 
-export function FilterChip({ label, options, selected, onChange }: Props) {
-  const [open, setOpen] = useState(false)
+export function FilterChip({
+  id,
+  label,
+  options,
+  selected,
+  open,
+  onOpenChange,
+  onChange,
+}: Props) {
   const count = selected.length
   const title = useMemo(
     () => (count ? `${label} · ${count}` : label),
@@ -17,11 +27,12 @@ export function FilterChip({ label, options, selected, onChange }: Props) {
   )
 
   return (
-    <div className="chip-wrap">
+    <div className={`chip-wrap ${open ? 'chip-wrap--open' : ''}`}>
       <button
         type="button"
         className={`chip ${count ? 'chip--on' : ''}`}
-        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        onClick={() => onOpenChange(open ? null : id)}
       >
         {title}
         <ChevronDown size={14} />

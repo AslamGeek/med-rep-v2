@@ -3,11 +3,12 @@ import { db, newVisitId } from '../db/database'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { addDaysIso, isSunday, joinList, todayIso, weekdayName } from '../lib/dates'
 import { persistVisit, undoVisit } from '../sync/engine'
-import type { Doctor, Visit, VisitKind } from '../types'
+import type { Doctor, Visit } from '../types'
 
 const EMPTY_DOCTORS: Doctor[] = []
 const EMPTY_VISITS: Visit[] = []
 const SUGGEST_KEY = 'visitSuggestedDate'
+const OFF_DAY = 'Holiday/Leave'
 
 export function Visits() {
   const doctors = useLiveQuery(() => db.doctors.filter((d) => d.active).toArray(), []) ?? EMPTY_DOCTORS
@@ -15,10 +16,11 @@ export function Visits() {
   const history = useLiveQuery(() => db.visits.orderBy('date').reverse().toArray(), []) ?? EMPTY_VISITS
 
   const [date, setDate] = useState(todayIso)
-  const [kind, setKind] = useState<VisitKind>('working')
+  const [offDay, setOffDay] = useState(false)
   const [camp, setCamp] = useState('')
   const [selected, setSelected] = useState<string[]>([])
   const [undo, setUndo] = useState<Visit | null>(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     void db.meta.get(SUGGEST_KEY).then((row) => {
@@ -28,12 +30,9 @@ export function Visits() {
     })
   }, [])
 
-  useEffect(() => {
-    if (isSunday(date)) setKind('Sunday')
-    else setKind((k) => (k === 'Sunday' ? 'working' : k))
-  }, [date])
-
-  const noDoctors = kind !== 'working'
+  const weekday = weekdayName(date)
+  const sunday = isSunday(date)
+  const noVisit = sunday || offDay
   const camps = lists?.values ?? []
 
   const selectedDoctors = useMemo(
@@ -45,21 +44,29 @@ export function Visits() {
     return [...new Set(names)]
   }, [selectedDoctors])
 
+  const canSaveWorking = selectedDoctors.length > 0
+
   async function save() {
-    const day = kind === 'working' ? weekdayName(date) : kind
+    if (!noVisit && !canSaveWorking) {
+      setError('Select at least one doctor')
+      return
+    }
+    setError('')
+    const day = sunday ? 'Sunday' : offDay ? OFF_DAY : weekday
     const visit: Visit = {
       id: newVisitId(),
       date,
       day,
-      camp: noDoctors ? '' : camp,
-      doctorsCount: noDoctors ? 0 : selectedDoctors.length,
-      pharmacyCount: noDoctors ? 0 : pharmacies.length,
-      doctors: noDoctors ? '' : joinList(selectedDoctors.map((d) => d.name)),
-      pharmacy: noDoctors ? '' : joinList(pharmacies),
+      camp: noVisit ? '' : camp,
+      doctorsCount: noVisit ? 0 : selectedDoctors.length,
+      pharmacyCount: noVisit ? 0 : pharmacies.length,
+      doctors: noVisit ? '' : joinList(selectedDoctors.map((d) => d.name)),
+      pharmacy: noVisit ? '' : joinList(pharmacies),
     }
     await persistVisit(visit)
     setUndo(visit)
     setSelected([])
+    setOffDay(false)
     if (date === todayIso()) {
       const next = addDaysIso(date, 1)
       setDate(next)
@@ -76,6 +83,7 @@ export function Visits() {
 
   function toggle(d: Doctor) {
     setSelected((ids) => (ids.includes(d.id) ? ids.filter((id) => id !== d.id) : [...ids, d.id]))
+    setError('')
   }
 
   const minDate = todayIso()
@@ -90,29 +98,34 @@ export function Visits() {
           value={date}
           onChange={(e) => {
             const v = e.target.value
-            if (v && v >= minDate) setDate(v)
+            if (v && v >= minDate) {
+              setDate(v)
+              setOffDay(false)
+              setError('')
+            }
           }}
         />
       </label>
 
-      <fieldset>
-        <legend>Day type</legend>
-        <div className="seg">
-          {(['working', 'Sunday', 'Holiday', 'Leave'] as VisitKind[]).map((k) => (
-            <button
-              key={k}
-              type="button"
-              className={kind === k ? 'on' : ''}
-              onClick={() => setKind(k)}
-              disabled={k === 'working' && isSunday(date)}
-            >
-              {k === 'working' ? weekdayName(date) : k}
-            </button>
-          ))}
-        </div>
-      </fieldset>
+      <p className="day-meta">
+        {weekday}
+        {sunday ? ' · no visit' : ''}
+      </p>
 
-      {!noDoctors && (
+      {!sunday && (
+        <button
+          type="button"
+          className={`chip holiday-toggle ${offDay ? 'chip--on' : ''}`}
+          onClick={() => {
+            setOffDay((v) => !v)
+            setError('')
+          }}
+        >
+          Mark as Holiday/Leave (no visit today)
+        </button>
+      )}
+
+      {!noVisit && (
         <>
           <label>
             Camp
@@ -161,7 +174,14 @@ export function Visits() {
         </>
       )}
 
-      <button type="button" className="primary" onClick={() => void save()}>
+      {error && <p className="error">{error}</p>}
+
+      <button
+        type="button"
+        className="primary"
+        disabled={!noVisit && !canSaveWorking}
+        onClick={() => void save()}
+      >
         Save visit
       </button>
 

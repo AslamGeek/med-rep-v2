@@ -27,6 +27,7 @@ export function Directory() {
   const products = useLiveQuery(() => db.products.toArray(), []) ?? EMPTY_PRODUCTS
   const saved = useLiveQuery(() => db.savedFilters.get('directory'), []) ?? emptyFilters
   const [editing, setEditing] = useState<Doctor | null | undefined>(undefined)
+  const [openFilter, setOpenFilter] = useState<string | null>(null)
 
   const listMap = useMemo(() => {
     const m: Record<string, string[]> = {}
@@ -99,41 +100,67 @@ export function Directory() {
         <Metric label="Pharm" value={metrics.pharm} />
       </div>
 
-      <div className="chips">
+      {openFilter && (
+        <button
+          type="button"
+          className="chip-backdrop"
+          aria-label="Close filters"
+          onClick={() => setOpenFilter(null)}
+        />
+      )}
+      <div className={`chips ${openFilter ? 'chips--open' : ''}`}>
         <FilterChip
+          id="area"
           label="Area"
           options={listMap.Areas ?? []}
           selected={saved.areas}
+          open={openFilter === 'area'}
+          onOpenChange={setOpenFilter}
           onChange={(areas) => patchFilters({ areas })}
         />
         <FilterChip
+          id="camp"
           label="Camp"
           options={listMap.Camps ?? []}
           selected={saved.camps}
+          open={openFilter === 'camp'}
+          onOpenChange={setOpenFilter}
           onChange={(camps) => patchFilters({ camps })}
         />
         <FilterChip
+          id="specialty"
           label="Specialty"
           options={listMap.Specialties ?? []}
           selected={saved.specialties}
+          open={openFilter === 'specialty'}
+          onOpenChange={setOpenFilter}
           onChange={(specialties) => patchFilters({ specialties })}
         />
         <FilterChip
+          id="call"
           label="Call"
           options={listMap['Call Schedule'] ?? []}
           selected={saved.callSchedules}
+          open={openFilter === 'call'}
+          onOpenChange={setOpenFilter}
           onChange={(callSchedules) => patchFilters({ callSchedules })}
         />
         <FilterChip
+          id="product"
           label="Product"
           options={products.map((p) => p.name)}
           selected={saved.products}
+          open={openFilter === 'product'}
+          onOpenChange={setOpenFilter}
           onChange={(next) => patchFilters({ products: next })}
         />
         <FilterChip
+          id="prescriber"
           label="Prescriber"
           options={['NRx', 'Rx']}
           selected={saved.prescribers}
+          open={openFilter === 'prescriber'}
+          onOpenChange={setOpenFilter}
           onChange={(next) => patchFilters({ prescribers: next as Prescriber[] })}
         />
       </div>
