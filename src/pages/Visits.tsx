@@ -4,6 +4,7 @@ import { db, newVisitId } from '../db/database'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { addDaysIso, isSunday, joinList, lastVisitByDoctorName, todayIso, visitRecencyLabel, weekdayName } from '../lib/dates'
 import { persistVisit, undoVisit } from '../sync/engine'
+import { VisitHistory } from './VisitHistory'
 import type { Doctor, Visit } from '../types'
 
 const EMPTY_DOCTORS: Doctor[] = []
@@ -16,9 +17,12 @@ export function Visits() {
   const lists = useLiveQuery(() => db.settingLists.get('Camps'), [])
   const history = useLiveQuery(() => db.visits.orderBy('date').reverse().toArray(), []) ?? EMPTY_VISITS
 
+  const [tab, setTab] = useState<'log' | 'history'>('log')
   const [date, setDate] = useState(todayIso)
   const [offDay, setOffDay] = useState(false)
   const [camp, setCamp] = useState('')
+  const [campTouched, setCampTouched] = useState(false)
+  const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<string[]>([])
   const [undo, setUndo] = useState<Visit | null>(null)
   const [error, setError] = useState('')
@@ -31,10 +35,19 @@ export function Visits() {
     })
   }, [])
 
+  const camps = lists?.values ?? []
+
+  // Default to the first camp once camps load, unless the user has already
+  // picked one themselves.
+  useEffect(() => {
+    if (!campTouched && !camp && camps.length > 0) {
+      setCamp(camps[0])
+    }
+  }, [camps, camp, campTouched])
+
   const weekday = weekdayName(date)
   const sunday = isSunday(date)
   const noVisit = sunday || offDay
-  const camps = lists?.values ?? []
 
   const campDoctors = useMemo(() => {
     if (!camp) return EMPTY_DOCTORS
@@ -43,6 +56,15 @@ export function Visits() {
       .slice()
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [doctors, camp])
+
+  const visibleDoctors = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return campDoctors
+    return campDoctors.filter((d) => {
+      const hay = [d.name, d.specialties.join(' '), d.hospital, d.attachedPharmacy].join(' ').toLowerCase()
+      return hay.includes(q)
+    })
+  }, [campDoctors, search])
 
   const selectedDoctors = useMemo(
     () => campDoctors.filter((d) => selected.includes(d.id)),
@@ -77,11 +99,12 @@ export function Visits() {
     setUndo(visit)
     setSelected([])
     setOffDay(false)
-    if (date === todayIso()) {
-      const next = addDaysIso(date, 1)
-      setDate(next)
-      await db.meta.put({ key: SUGGEST_KEY, value: next })
-    }
+    // Always advance from the date just used, never back to today.
+    const min = todayIso()
+    const next = addDaysIso(date, 1)
+    const nextDate = next < min ? min : next
+    setDate(nextDate)
+    await db.meta.put({ key: SUGGEST_KEY, value: nextDate })
     window.setTimeout(() => setUndo((u) => (u?.id === visit.id ? null : u)), 8000)
   }
 
@@ -96,156 +119,200 @@ export function Visits() {
     setError('')
   }
 
+  function selectAllVisible() {
+    setSelected((ids) => [...new Set([...ids, ...visibleDoctors.map((d) => d.id)])])
+    setError('')
+  }
+
+  function clearAllVisible() {
+    const visibleIds = new Set(visibleDoctors.map((d) => d.id))
+    setSelected((ids) => ids.filter((id) => !visibleIds.has(id)))
+    setError('')
+  }
+
   const minDate = todayIso()
   const doctorCount = selectedDoctors.length
   const pharmacyCount = pharmacies.length
 
   return (
     <section className="page visits">
-      <div className="visit-toolbar">
-        <label className="visit-date">
-          <span className="visit-field-head">
-            Date
-            <span className="day-meta">
-              {weekday}
-              {sunday ? ' · no visit' : ''}
-            </span>
-          </span>
-          <input
-            type="date"
-            min={minDate}
-            value={date}
-            onChange={(e) => {
-              const v = e.target.value
-              if (v && v >= minDate) {
-                setDate(v)
-                setOffDay(false)
-                setError('')
-              }
-            }}
-          />
-        </label>
-
-        <label className="visit-camp">
-          <span className="visit-field-head">Camp</span>
-          <select
-            value={camp}
-            onChange={(e) => {
-              setCamp(e.target.value)
-              setSelected([])
-              setError('')
-            }}
-          >
-            <option value="">Select</option>
-            {camps.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {!sunday && (
-          <button
-            type="button"
-            className={`visit-off ${offDay ? 'on' : ''}`}
-            aria-pressed={offDay}
-            aria-label="Mark as Holiday/Leave (no visit today)"
-            title="Holiday/Leave"
-            onClick={() => {
-              setOffDay((v) => !v)
-              setError('')
-            }}
-          >
-            <Ban size={20} />
-          </button>
-        )}
+      <div className="visit-tabs">
+        <button
+          type="button"
+          className={`visit-tab ${tab === 'log' ? 'on' : ''}`}
+          onClick={() => setTab('log')}
+        >
+          Log Visits
+        </button>
+        <button
+          type="button"
+          className={`visit-tab ${tab === 'history' ? 'on' : ''}`}
+          onClick={() => setTab('history')}
+        >
+          Visit History
+        </button>
       </div>
 
-      {!noVisit && (
+      {tab === 'history' ? (
+        <VisitHistory history={history} camps={camps} />
+      ) : (
         <>
-          <div className="picker">
-            <p className="picker-label">Doctors</p>
-            <div className="picker-pane">
-              {!camp && <p className="muted pad">Select a camp to see doctors</p>}
-              {camp &&
-                campDoctors.map((d) => {
-                  const on = selected.includes(d.id)
-                  const recency = visitRecencyLabel(lastVisits.get(d.name.toLowerCase()))
-                  const subtitle = [d.specialties.join(', '), d.hospital, d.attachedPharmacy]
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                    .join(' · ')
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      className={`picker-item ${on ? 'on' : ''}`}
-                      onClick={() => toggle(d)}
-                    >
-                      <input type="checkbox" checked={on} readOnly tabIndex={-1} />
-                      <span className="picker-body">
-                        <strong className="picker-name">{d.name}</strong>
-                        {subtitle && <span className="picker-sub">{subtitle}</span>}
-                        <span className={`visit-tag visit-tag--${recency.tone}`}>{recency.text}</span>
-                      </span>
-                    </button>
-                  )
-                })}
-              {camp && campDoctors.length === 0 && (
-                <p className="muted pad">No active doctors in this camp</p>
+          <div className="visit-toolbar">
+            <label className="visit-date">
+              <span className="visit-field-head">
+                Date
+                <span className="day-meta">
+                  {weekday}
+                  {sunday ? ' · no visit' : ''}
+                </span>
+              </span>
+              <input
+                type="date"
+                min={minDate}
+                value={date}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (v && v >= minDate) {
+                    setDate(v)
+                    setOffDay(false)
+                    setError('')
+                  }
+                }}
+              />
+            </label>
+
+            <label className="visit-camp">
+              <span className="visit-field-head">Camp</span>
+              {camps.length === 0 ? (
+                <p className="muted pad">No camps configured yet — add one in Settings</p>
+              ) : (
+                <select
+                  value={camp}
+                  onChange={(e) => {
+                    setCamp(e.target.value)
+                    setCampTouched(true)
+                    setSelected([])
+                    setSearch('')
+                    setError('')
+                  }}
+                >
+                  {camps.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               )}
-            </div>
+            </label>
+
+            {!sunday && (
+              <button
+                type="button"
+                className={`visit-off ${offDay ? 'on' : ''}`}
+                aria-pressed={offDay}
+                aria-label="Mark as Holiday/Leave (no visit today)"
+                title="Holiday/Leave"
+                onClick={() => {
+                  setOffDay((v) => !v)
+                  setError('')
+                }}
+              >
+                <Ban size={20} />
+              </button>
+            )}
           </div>
 
-          <div className="preview">
-            <p>
-              {doctorCount} doctor{doctorCount === 1 ? '' : 's'} · {pharmacyCount}{' '}
-              {pharmacyCount === 1 ? 'pharmacy' : 'pharmacies'} selected
-            </p>
-            {selectedDoctors.length > 0 && (
-              <p className="muted">{selectedDoctors.map((d) => d.name).join('; ')}</p>
-            )}
-            {pharmacies.length > 0 && <p className="muted">{pharmacies.join('; ')}</p>}
-          </div>
+          {!noVisit && (
+            <>
+              <div className="picker">
+                <div className="picker-head-row">
+                  <p className="picker-label">Doctors</p>
+                  <div className="picker-bulk-actions">
+                    <button type="button" onClick={selectAllVisible} disabled={visibleDoctors.length === 0}>
+                      Select all
+                    </button>
+                    <button type="button" onClick={clearAllVisible} disabled={visibleDoctors.length === 0}>
+                      Clear all
+                    </button>
+                  </div>
+                </div>
+                {camp && (
+                  <input
+                    className="picker-search"
+                    placeholder="Search doctors"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                )}
+                <div className="picker-pane">
+                  {!camp && <p className="muted pad">Select a camp to see doctors</p>}
+                  {camp &&
+                    visibleDoctors.map((d) => {
+                      const on = selected.includes(d.id)
+                      const recency = visitRecencyLabel(lastVisits.get(d.name.toLowerCase()))
+                      const subtitle = [d.specialties.join(', '), d.hospital, d.attachedPharmacy]
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .join(' · ')
+                      return (
+                        <button
+                          key={d.id}
+                          type="button"
+                          className={`picker-item ${on ? 'on' : ''}`}
+                          onClick={() => toggle(d)}
+                        >
+                          <input type="checkbox" checked={on} readOnly tabIndex={-1} />
+                          <span className="picker-body">
+                            <strong className="picker-name">{d.name}</strong>
+                            {subtitle && <span className="picker-sub">{subtitle}</span>}
+                            <span className={`visit-tag visit-tag--${recency.tone}`}>{recency.text}</span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  {camp && campDoctors.length === 0 && (
+                    <p className="muted pad">No active doctors in this camp</p>
+                  )}
+                  {camp && campDoctors.length > 0 && visibleDoctors.length === 0 && (
+                    <p className="muted pad">No doctors match your search</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="preview">
+                <p>
+                  {doctorCount} doctor{doctorCount === 1 ? '' : 's'} · {pharmacyCount}{' '}
+                  {pharmacyCount === 1 ? 'pharmacy' : 'pharmacies'} selected
+                </p>
+                {selectedDoctors.length > 0 && (
+                  <p className="muted">{selectedDoctors.map((d) => d.name).join('; ')}</p>
+                )}
+                {pharmacies.length > 0 && <p className="muted">{pharmacies.join('; ')}</p>}
+              </div>
+            </>
+          )}
+
+          {error && <p className="error">{error}</p>}
+
+          <button
+            type="button"
+            className="primary"
+            disabled={!noVisit && !canSaveWorking}
+            onClick={() => void save()}
+          >
+            Save visit
+          </button>
+
+          {undo && (
+            <div className="snack">
+              Saved
+              <button type="button" onClick={() => void revert()}>
+                Undo
+              </button>
+            </div>
+          )}
         </>
       )}
-
-      {error && <p className="error">{error}</p>}
-
-      <button
-        type="button"
-        className="primary"
-        disabled={!noVisit && !canSaveWorking}
-        onClick={() => void save()}
-      >
-        Save visit
-      </button>
-
-      {undo && (
-        <div className="snack">
-          Saved
-          <button type="button" onClick={() => void revert()}>
-            Undo
-          </button>
-        </div>
-      )}
-
-      <h3>History</h3>
-      <ul className="history">
-        {history.map((v) => (
-          <li key={v.id}>
-            <strong>
-              {v.date} · {v.day}
-            </strong>
-            <span>
-              {v.doctorsCount} doctors · {v.pharmacyCount} pharmacies
-            </span>
-            {v.doctors && <p className="muted">{v.doctors}</p>}
-          </li>
-        ))}
-        {history.length === 0 && <p className="muted">No visits yet</p>}
-      </ul>
     </section>
   )
 }
