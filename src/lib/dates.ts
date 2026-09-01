@@ -27,12 +27,14 @@ export function isSunday(iso: string) {
 }
 
 export function joinList(values: string[]) {
-  return values.filter(Boolean).join('; ')
+  return values.filter(Boolean).join('\n')
 }
 
 export function splitList(value: string) {
+  // Newline is the current format; ';' and '|' are kept for backward
+  // compatibility with older rows saved before this change.
   return value
-    .split(/[;|]/)
+    .split(/\r?\n|[;|]/)
     .map((s) => s.trim())
     .filter(Boolean)
 }
@@ -61,9 +63,16 @@ export function lastVisitByDoctorName(visits: { date: string; doctors: string }[
 export function visitRecencyLabel(lastDate: string | undefined, today = todayIso()) {
   if (!lastDate) return { text: 'Never visited', tone: 'never' as const }
   const days = daysBetweenIso(lastDate, today)
-  if (days <= 0) return { text: 'Visited today', tone: 'ok' as const }
-  const text = `Visited ${days} day${days === 1 ? '' : 's'} ago`
-  return { text, tone: days >= 14 ? ('stale' as const) : ('ok' as const) }
+  // Bug fix: this used to treat any non-positive diff as "today", which
+  // silently swallowed the common case where the last logged visit has a
+  // future date (since dates auto-advance past "today" after each save).
+  if (days === 0) return { text: `Visited today (${lastDate})`, tone: 'ok' as const }
+  if (days > 0) {
+    const text = `Last visited ${lastDate} · ${days} day${days === 1 ? '' : 's'} ago`
+    return { text, tone: days >= 14 ? ('stale' as const) : ('ok' as const) }
+  }
+  const inDays = Math.abs(days)
+  return { text: `Scheduled ${lastDate} · in ${inDays} day${inDays === 1 ? '' : 's'}`, tone: 'ok' as const }
 }
 
 export function applyTheme(theme: 'light' | 'dark' | 'system') {

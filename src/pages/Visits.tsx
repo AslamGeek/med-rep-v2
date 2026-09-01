@@ -5,6 +5,8 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { addDaysIso, isSunday, joinList, lastVisitByDoctorName, todayIso, visitRecencyLabel, weekdayName } from '../lib/dates'
 import { persistVisit, undoVisit } from '../sync/engine'
 import { VisitHistory } from './VisitHistory'
+import { NumberedList } from '../components/NumberedList'
+import { splitList } from '../lib/dates'
 import type { Doctor, Visit } from '../types'
 
 const EMPTY_DOCTORS: Doctor[] = []
@@ -15,7 +17,10 @@ const OFF_DAY = 'Holiday/Leave'
 export function Visits() {
   const doctors = useLiveQuery(() => db.doctors.filter((d) => d.active).toArray(), []) ?? EMPTY_DOCTORS
   const lists = useLiveQuery(() => db.settingLists.get('Camps'), [])
-  const history = useLiveQuery(() => db.visits.orderBy('date').reverse().toArray(), []) ?? EMPTY_VISITS
+  // Order by id (which is timestamp-based) descending so the most recently
+  // saved bundle is always first — not just the latest calendar date, since
+  // catch-up entries for older dates can be logged after newer ones.
+  const history = useLiveQuery(() => db.visits.orderBy('id').reverse().toArray(), []) ?? EMPTY_VISITS
 
   const [tab, setTab] = useState<'log' | 'history'>('log')
   const [date, setDate] = useState(todayIso)
@@ -159,13 +164,7 @@ export function Visits() {
         <>
           <div className="visit-toolbar">
             <label className="visit-date">
-              <span className="visit-field-head">
-                Date
-                <span className="day-meta">
-                  {weekday}
-                  {sunday ? ' · no visit' : ''}
-                </span>
-              </span>
+              <span className="visit-field-head">Date</span>
               <input
                 type="date"
                 min={minDate}
@@ -179,6 +178,10 @@ export function Visits() {
                   }
                 }}
               />
+              <span className="day-meta">
+                {weekday}
+                {sunday ? ' · no visit' : ''}
+              </span>
             </label>
 
             <label className="visit-camp">
@@ -285,9 +288,9 @@ export function Visits() {
                   {pharmacyCount === 1 ? 'pharmacy' : 'pharmacies'} selected
                 </p>
                 {selectedDoctors.length > 0 && (
-                  <p className="muted">{selectedDoctors.map((d) => d.name).join('; ')}</p>
+                  <NumberedList items={selectedDoctors.map((d) => d.name)} />
                 )}
-                {pharmacies.length > 0 && <p className="muted">{pharmacies.join('; ')}</p>}
+                {pharmacies.length > 0 && <NumberedList items={pharmacies} />}
               </div>
             </>
           )}

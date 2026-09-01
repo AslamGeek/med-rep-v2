@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { splitList } from '../lib/dates'
+import { NumberedList } from '../components/NumberedList'
 import type { Visit } from '../types'
 
 export function VisitHistory({ history, camps }: { history: Visit[]; camps: string[] }) {
@@ -60,12 +62,15 @@ export function VisitHistory({ history, camps }: { history: Visit[]; camps: stri
         {filtered.map((v) => {
           const isOpen = expanded.has(v.id)
           const isHoliday = v.day === 'Holiday/Leave' || v.day === 'Sunday'
+          const doctorNames = splitList(v.doctors)
+          const pharmacyNames = splitList(v.pharmacy)
           return (
-            <li key={v.id} className="history-item">
+            <li key={v.id} className={`history-item ${isHoliday ? 'history-item--holiday' : ''}`}>
               <button type="button" className="history-row" onClick={() => toggle(v.id)}>
                 <span className="history-row-main">
                   <strong>
-                    {v.date} · {v.camp || v.day}
+                    {v.date} · {v.day}
+                    {v.camp && ` · ${v.camp}`}
                   </strong>
                   <span className="muted">
                     {v.doctorsCount} doctors · {v.pharmacyCount} pharmacies
@@ -76,9 +81,21 @@ export function VisitHistory({ history, camps }: { history: Visit[]; camps: stri
               </button>
               {isOpen && (
                 <div className="history-details">
-                  {v.doctors && <p className="muted">Doctors: {v.doctors}</p>}
-                  {v.pharmacy && <p className="muted">Pharmacies: {v.pharmacy}</p>}
-                  {!v.doctors && !v.pharmacy && <p className="muted">No visit logged this day</p>}
+                  {doctorNames.length > 0 && (
+                    <>
+                      <p className="muted history-details-label">Doctors</p>
+                      <NumberedList items={doctorNames} />
+                    </>
+                  )}
+                  {pharmacyNames.length > 0 && (
+                    <>
+                      <p className="muted history-details-label">Pharmacies</p>
+                      <NumberedList items={pharmacyNames} />
+                    </>
+                  )}
+                  {doctorNames.length === 0 && pharmacyNames.length === 0 && (
+                    <p className="muted">No visit logged this day</p>
+                  )}
                 </div>
               )}
             </li>

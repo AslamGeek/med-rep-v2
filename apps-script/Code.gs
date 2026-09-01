@@ -247,11 +247,15 @@ function upsertDoctor(body) {
 function appendVisit(body) {
   const v = body.visit || {};
   const sh = sheet('Visits', VISIT_HEADERS);
-  sh.appendRow(
-    VISIT_HEADERS.map(function (h) {
-      return v[h] == null ? '' : v[h];
-    }),
-  );
+  const values = VISIT_HEADERS.map(function (h) {
+    return v[h] == null ? '' : v[h];
+  });
+  // Insert directly under the header row so the newest bundle is always
+  // at the top of the sheet, instead of appending to the bottom.
+  sh.insertRowAfter(1);
+  const range = sh.getRange(2, 1, 1, values.length);
+  range.setValues([values]);
+  range.setWrap(true); // let the newline-separated Doctors/Pharmacy cells wrap
   return { ok: true };
 }
 
