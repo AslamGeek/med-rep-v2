@@ -6,7 +6,6 @@ import { addDaysIso, isSunday, joinList, lastVisitByDoctorName, todayIso, visitR
 import { persistVisit, undoVisit } from '../sync/engine'
 import { VisitHistory } from './VisitHistory'
 import { NumberedList } from '../components/NumberedList'
-import { splitList } from '../lib/dates'
 import type { Doctor, Visit } from '../types'
 
 const EMPTY_DOCTORS: Doctor[] = []
