@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { splitList } from '../lib/dates'
-import { NumberedList } from '../components/NumberedList'
+import { TwoColumnLists } from '../components/NumberedList'
 import type { Visit } from '../types'
 
 export function VisitHistory({ history, camps }: { history: Visit[]; camps: string[] }) {
@@ -81,18 +81,12 @@ export function VisitHistory({ history, camps }: { history: Visit[]; camps: stri
               </button>
               {isOpen && (
                 <div className="history-details">
-                  {doctorNames.length > 0 && (
-                    <>
-                      <p className="muted history-details-label">Doctors</p>
-                      <NumberedList items={doctorNames} />
-                    </>
-                  )}
-                  {pharmacyNames.length > 0 && (
-                    <>
-                      <p className="muted history-details-label">Pharmacies</p>
-                      <NumberedList items={pharmacyNames} />
-                    </>
-                  )}
+                  <TwoColumnLists
+                    leftLabel="Doctors"
+                    leftItems={doctorNames}
+                    rightLabel="Pharmacies"
+                    rightItems={pharmacyNames}
+                  />
                   {doctorNames.length === 0 && pharmacyNames.length === 0 && (
                     <p className="muted">No visit logged this day</p>
                   )}

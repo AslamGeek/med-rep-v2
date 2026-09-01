@@ -5,7 +5,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { addDaysIso, isSunday, joinList, lastVisitByDoctorName, todayIso, visitRecencyLabel, weekdayName } from '../lib/dates'
 import { persistVisit, undoVisit } from '../sync/engine'
 import { VisitHistory } from './VisitHistory'
-import { NumberedList } from '../components/NumberedList'
+import { TwoColumnLists } from '../components/NumberedList'
 import type { Doctor, Visit } from '../types'
 
 const EMPTY_DOCTORS: Doctor[] = []
@@ -207,21 +207,26 @@ export function Visits() {
               )}
             </label>
 
-            {!sunday && (
-              <button
-                type="button"
-                className={`visit-off ${offDay ? 'on' : ''}`}
-                aria-pressed={offDay}
-                aria-label="Mark as Holiday/Leave (no visit today)"
-                title="Holiday/Leave"
-                onClick={() => {
-                  setOffDay((v) => !v)
-                  setError('')
-                }}
-              >
-                <Ban size={20} />
-              </button>
-            )}
+        {!sunday && (
+          <div className="visit-off-wrap">
+            <span className="visit-field-head" aria-hidden="true">
+              &nbsp;
+            </span>
+            <button
+              type="button"
+              className={`visit-off ${offDay ? 'on' : ''}`}
+              aria-pressed={offDay}
+              aria-label="Mark as Holiday/Leave (no visit today)"
+              title="Holiday/Leave"
+              onClick={() => {
+                setOffDay((v) => !v)
+                setError('')
+              }}
+            >
+              <Ban size={20} />
+            </button>
+          </div>
+        )}
           </div>
 
           {!noVisit && (
@@ -286,10 +291,12 @@ export function Visits() {
                   {doctorCount} doctor{doctorCount === 1 ? '' : 's'} · {pharmacyCount}{' '}
                   {pharmacyCount === 1 ? 'pharmacy' : 'pharmacies'} selected
                 </p>
-                {selectedDoctors.length > 0 && (
-                  <NumberedList items={selectedDoctors.map((d) => d.name)} />
-                )}
-                {pharmacies.length > 0 && <NumberedList items={pharmacies} />}
+                <TwoColumnLists
+                  leftLabel="Doctors"
+                  leftItems={selectedDoctors.map((d) => d.name)}
+                  rightLabel="Pharmacies"
+                  rightItems={pharmacies}
+                />
               </div>
             </>
           )}
