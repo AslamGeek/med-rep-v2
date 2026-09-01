@@ -1,0 +1,5 @@
+export const GAS_WEBAPP_URL =
+  import.meta.env.VITE_GAS_WEBAPP_URL ||
+  'https://script.google.com/macros/s/AKfycbwpnpgOjZyDcpj3L6gEm0ipthU_Lo_4N6qeoJGml_niv_6YVO2h1pfFo877Rmaa0R79/exec'
+
+export const APP_NAME = 'MedRep'
