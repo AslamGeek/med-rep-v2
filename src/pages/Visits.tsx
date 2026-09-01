@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Ban } from 'lucide-react'
 import { db, newVisitId } from '../db/database'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { addDaysIso, isSunday, joinList, todayIso, weekdayName } from '../lib/dates'
+import { addDaysIso, isSunday, joinList, lastVisitByDoctorName, todayIso, visitRecencyLabel, weekdayName } from '../lib/dates'
 import { persistVisit, undoVisit } from '../sync/engine'
 import type { Doctor, Visit } from '../types'
 
@@ -53,6 +53,7 @@ export function Visits() {
     return [...new Set(names)]
   }, [selectedDoctors])
 
+  const lastVisits = useMemo(() => lastVisitByDoctorName(history), [history])
   const canSaveWorking = selectedDoctors.length > 0
 
   async function save() {
@@ -170,6 +171,11 @@ export function Visits() {
               {camp &&
                 campDoctors.map((d) => {
                   const on = selected.includes(d.id)
+                  const recency = visitRecencyLabel(lastVisits.get(d.name.toLowerCase()))
+                  const subtitle = [d.specialties.join(', '), d.hospital, d.attachedPharmacy]
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .join(' · ')
                   return (
                     <button
                       key={d.id}
@@ -178,8 +184,11 @@ export function Visits() {
                       onClick={() => toggle(d)}
                     >
                       <input type="checkbox" checked={on} readOnly tabIndex={-1} />
-                      <span className="picker-name">{d.name}</span>
-                      <span className="muted">{d.area}</span>
+                      <span className="picker-body">
+                        <strong className="picker-name">{d.name}</strong>
+                        {subtitle && <span className="picker-sub">{subtitle}</span>}
+                        <span className={`visit-tag visit-tag--${recency.tone}`}>{recency.text}</span>
+                      </span>
                     </button>
                   )
                 })}

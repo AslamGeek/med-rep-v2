@@ -37,6 +37,35 @@ export function splitList(value: string) {
     .filter(Boolean)
 }
 
+export function daysBetweenIso(fromIso: string, toIso: string) {
+  const [fy, fm, fd] = fromIso.split('-').map(Number)
+  const [ty, tm, td] = toIso.split('-').map(Number)
+  const from = Date.UTC(fy, fm - 1, fd)
+  const to = Date.UTC(ty, tm - 1, td)
+  return Math.round((to - from) / 86400000)
+}
+
+export function lastVisitByDoctorName(visits: { date: string; doctors: string }[]) {
+  const map = new Map<string, string>()
+  for (const visit of visits) {
+    if (!visit.date || !visit.doctors) continue
+    for (const name of splitList(visit.doctors)) {
+      const key = name.toLowerCase()
+      const prev = map.get(key)
+      if (!prev || visit.date > prev) map.set(key, visit.date)
+    }
+  }
+  return map
+}
+
+export function visitRecencyLabel(lastDate: string | undefined, today = todayIso()) {
+  if (!lastDate) return { text: 'Never visited', tone: 'never' as const }
+  const days = daysBetweenIso(lastDate, today)
+  if (days <= 0) return { text: 'Visited today', tone: 'ok' as const }
+  const text = `Visited ${days} day${days === 1 ? '' : 's'} ago`
+  return { text, tone: days >= 14 ? ('stale' as const) : ('ok' as const) }
+}
+
 export function applyTheme(theme: 'light' | 'dark' | 'system') {
   const root = document.documentElement
   const resolved =

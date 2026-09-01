@@ -516,23 +516,73 @@ textarea {
   border: 0;
   border-bottom: 1px solid var(--line);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   text-align: left;
+  padding: 10px 12px;
+  min-height: 0;
 }
 
 .picker-item input {
   min-height: 0;
   width: 18px;
   height: 18px;
+  margin-top: 3px;
+  flex: 0 0 18px;
   padding: 0;
   accent-color: var(--accent);
   pointer-events: none;
 }
 
-.picker-name {
-  flex: 1;
+.picker-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
   min-width: 0;
+  flex: 1;
+}
+
+.picker-name {
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.picker-sub {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.visit-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.visit-tag--never,
+.visit-tag--stale {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.visit-tag--ok {
+  background: #eef2f6;
+  color: #475569;
+}
+
+[data-theme='dark'] .visit-tag--never,
+[data-theme='dark'] .visit-tag--stale {
+  background: rgba(185, 28, 28, 0.28);
+  color: #fca5a5;
+}
+
+[data-theme='dark'] .visit-tag--ok {
+  background: #2a3540;
+  color: #cbd5e1;
 }
 
 .preview,
