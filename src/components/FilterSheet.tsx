@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import type { Prescriber, SavedFilters } from '../types'
+import type { SavedFilters } from '../types'
 
 type Draft = Pick
   SavedFilters,
