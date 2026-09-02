@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import type { SavedFilters } from '../types'
 
-type Draft = Pick
-  SavedFilters,
-  'prescribers' | 'specialties' | 'camps' | 'areas' | 'callSchedules' | 'products'
->
+type Draft = {
+  prescribers: string[]
+  specialties: string[]
+  camps: string[]
+  areas: string[]
+  callSchedules: string[]
+  products: string[]
+}
 
 type Props = {
   open: boolean
@@ -109,57 +112,4 @@ export function FilterSheet({
           label="Call Schedule"
           options={callOptions}
           selected={draft.callSchedules}
-          onToggle={(v) => toggle('callSchedules', v)}
-        />
-        <FilterGroup
-          label="Prescribing Product"
-          options={productOptions}
-          selected={draft.products}
-          onToggle={(v) => toggle('products', v)}
-        />
-      </div>
-      <footer className="sheet-foot filter-sheet-foot">
-        <button type="button" className="text-btn" onClick={clearAll}>
-          Clear All
-        </button>
-        <button type="button" className="primary" onClick={() => onApply(draft)}>
-          Apply Filters ({count})
-        </button>
-      </footer>
-    </div>
-  )
-}
-
-function FilterGroup({
-  label,
-  options,
-  selected,
-  onToggle,
-}: {
-  label: string
-  options: string[]
-  selected: string[]
-  onToggle: (value: string) => void
-}) {
-  return (
-    <fieldset>
-      <legend>{label.toUpperCase()}</legend>
-      <div className="pill-row">
-        {options.map((opt) => {
-          const on = selected.includes(opt)
-          return (
-            <button
-              key={opt}
-              type="button"
-              className={`pill ${on ? 'on' : ''}`}
-              onClick={() => onToggle(opt)}
-            >
-              {opt}
-            </button>
-          )
-        })}
-        {options.length === 0 && <p className="muted">No options yet</p>}
-      </div>
-    </fieldset>
-  )
-}
+          onToggle={(v) =>
