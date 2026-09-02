@@ -193,8 +193,7 @@ export function Directory({ searchOpen }: { searchOpen: boolean }) {
         <Metric label="Pharm" value={metrics.pharm} />
       </div>
 
-      {searchOpen && (
-        <>
+      <>
           {openFilter && (
             <button
               type="button"
@@ -294,8 +293,7 @@ export function Directory({ searchOpen }: { searchOpen: boolean }) {
           onChange={(next) => patchFilters({ prescribers: next as Prescriber[] })}
         />
           </div>
-        </>
-      )}
+      </>
 
       <ul className="cards">
         {filtered.map((d) => (
