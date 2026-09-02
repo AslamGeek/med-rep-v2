@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BookUser, CalendarDays } from 'lucide-react'
+import { BookUser, CalendarDays, Search } from 'lucide-react'
 import { ThemeToggle } from './components/ThemeToggle'
 import { Directory } from './pages/Directory'
 import { Visits } from './pages/Visits'
@@ -13,6 +13,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('directory')
   const [ready, setReady] = useState(false)
   const [barsHidden, setBarsHidden] = useState(false)
+  const [directorySearchOpen, setDirectorySearchOpen] = useState(false)
 
   useEffect(() => {
     applyTheme(storedTheme())
@@ -61,11 +62,26 @@ export default function App() {
     <div className="app">
       <header className={`top ${barsHidden ? 'hide' : ''}`}>
         <h1>MedRep</h1>
-        <ThemeToggle />
+        <div className="top-actions">
+          {tab === 'directory' && (
+            <button
+              type="button"
+              className="theme-toggle"
+              aria-label={directorySearchOpen ? 'Hide search' : 'Search doctors'}
+              aria-pressed={directorySearchOpen}
+              onClick={() => setDirectorySearchOpen((o) => !o)}
+            >
+              <Search size={18} />
+            </button>
+          )}
+          <ThemeToggle />
+        </div>
       </header>
 
       <main>
-        {tab === 'directory' && <Directory />}
+        {tab === 'directory' && (
+          <Directory searchOpen={directorySearchOpen} onSearchOpenChange={setDirectorySearchOpen} />
+        )}
         {tab === 'visits' && <Visits />}
       </main>
 

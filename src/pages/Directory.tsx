@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Plus, Search, X } from 'lucide-react'
 import { db } from '../db/database'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import type { Doctor, Prescriber, Product, SavedFilters, SettingList } from '../types'
@@ -21,13 +21,24 @@ const emptyFilters: SavedFilters = {
   prescribers: [],
 }
 
-export function Directory() {
+export function Directory({
+  searchOpen,
+  onSearchOpenChange,
+}: {
+  searchOpen: boolean
+  onSearchOpenChange: (open: boolean) => void
+}) {
   const doctors = useLiveQuery(() => db.doctors.toArray(), []) ?? EMPTY_DOCTORS
   const lists = useLiveQuery(() => db.settingLists.toArray(), []) ?? EMPTY_LISTS
   const products = useLiveQuery(() => db.products.toArray(), []) ?? EMPTY_PRODUCTS
   const saved = useLiveQuery(() => db.savedFilters.get('directory'), []) ?? emptyFilters
   const [editing, setEditing] = useState<Doctor | null | undefined>(undefined)
   const [openFilter, setOpenFilter] = useState<string | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus()
+  }, [searchOpen])
 
   const listMap = useMemo(() => {
     const m: Record<string, string[]> = {}
@@ -83,14 +94,27 @@ export function Directory() {
 
   return (
     <section className="page">
-      <div className="search-row">
-        <Search size={18} />
-        <input
-          placeholder="Search doctors"
-          value={saved.query}
-          onChange={(e) => patchFilters({ query: e.target.value })}
-        />
-      </div>
+      {searchOpen && (
+        <div className="search-row">
+          <Search size={18} />
+          <input
+            ref={searchInputRef}
+            placeholder="Search doctors"
+            value={saved.query}
+            onChange={(e) => patchFilters({ query: e.target.value })}
+          />
+          {saved.query && (
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="Clear search"
+              onClick={() => patchFilters({ query: '' })}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="metrics">
         <Metric label="Total" value={metrics.total} />
@@ -100,15 +124,17 @@ export function Directory() {
         <Metric label="Pharm" value={metrics.pharm} />
       </div>
 
-      {openFilter && (
-        <button
-          type="button"
-          className="chip-backdrop"
-          aria-label="Close filters"
-          onClick={() => setOpenFilter(null)}
-        />
-      )}
-      <div className={`chips ${openFilter ? 'chips--open' : ''}`}>
+      {searchOpen && (
+        <>
+          {openFilter && (
+            <button
+              type="button"
+              className="chip-backdrop"
+              aria-label="Close filters"
+              onClick={() => setOpenFilter(null)}
+            />
+          )}
+          <div className={`chips ${openFilter ? 'chips--open' : ''}`}>
         <FilterChip
           id="area"
           label="Area"
@@ -163,7 +189,9 @@ export function Directory() {
           onOpenChange={setOpenFilter}
           onChange={(next) => patchFilters({ prescribers: next as Prescriber[] })}
         />
-      </div>
+          </div>
+        </>
+      )}
 
       <ul className="cards">
         {filtered.map((d) => (

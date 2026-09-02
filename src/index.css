@@ -896,3 +896,9 @@ legend {
   place-items: center;
   color: var(--text);
 }
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
