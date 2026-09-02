@@ -6,16 +6,19 @@ import { addDaysIso, isSunday, joinList, lastVisitByDoctorName, todayIso, visitR
 import { persistVisit, undoVisit } from '../sync/engine'
 import { VisitHistory } from './VisitHistory'
 import { TwoColumnLists } from '../components/NumberedList'
-import type { Doctor, Visit } from '../types'
+import { FilterChip } from '../components/FilterChip'
+import type { Doctor, SettingList, Visit } from '../types'
 
 const EMPTY_DOCTORS: Doctor[] = []
 const EMPTY_VISITS: Visit[] = []
+const EMPTY_LISTS: SettingList[] = []
 const SUGGEST_KEY = 'visitSuggestedDate'
 const OFF_DAY = 'Holiday/Leave'
 
 export function Visits() {
   const doctors = useLiveQuery(() => db.doctors.filter((d) => d.active).toArray(), []) ?? EMPTY_DOCTORS
   const lists = useLiveQuery(() => db.settingLists.get('Camps'), [])
+  const allLists = useLiveQuery(() => db.settingLists.toArray(), []) ?? EMPTY_LISTS
   // Order by id (which is timestamp-based) descending so the most recently
   // saved bundle is always first — not just the latest calendar date, since
   // catch-up entries for older dates can be logged after newer ones.
@@ -28,6 +31,10 @@ export function Visits() {
   const [campTouched, setCampTouched] = useState(false)
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<string[]>([])
+  const [openFilter, setOpenFilter] = useState<string | null>(null)
+  const [scheduleFilter, setScheduleFilter] = useState<string[]>([])
+  const [scheduleTouched, setScheduleTouched] = useState(false)
+  const [specialtyFilter, setSpecialtyFilter] = useState<string[]>([])
   const [undo, setUndo] = useState<Visit | null>(null)
   const [error, setError] = useState('')
 
@@ -40,6 +47,22 @@ export function Visits() {
   }, [])
 
   const camps = lists?.values ?? []
+  const scheduleOptions = useMemo(
+    () => allLists.find((l) => l.key === 'Call Schedule')?.values ?? [],
+    [allLists],
+  )
+  const specialtyOptions = useMemo(
+    () => allLists.find((l) => l.key === 'Specialties')?.values ?? [],
+    [allLists],
+  )
+
+  // Default the schedule filter to "Everyday" once it's available, unless
+  // the user has deliberately changed it. Specialty stays unset (= all).
+  useEffect(() => {
+    if (!scheduleTouched && scheduleFilter.length === 0 && scheduleOptions.includes('Everyday')) {
+      setScheduleFilter(['Everyday'])
+    }
+  }, [scheduleOptions, scheduleTouched, scheduleFilter])
 
   // Default to the first camp once camps load, unless the user has already
   // picked one themselves.
@@ -62,13 +85,22 @@ export function Visits() {
   }, [doctors, camp])
 
   const visibleDoctors = useMemo(() => {
+    let list = campDoctors
+    if (scheduleFilter.length) {
+      list = list.filter((d) => scheduleFilter.includes(d.callSchedule))
+    }
+    if (specialtyFilter.length) {
+      list = list.filter((d) => d.specialties.some((s) => specialtyFilter.includes(s)))
+    }
     const q = search.trim().toLowerCase()
-    if (!q) return campDoctors
-    return campDoctors.filter((d) => {
-      const hay = [d.name, d.specialties.join(' '), d.hospital, d.attachedPharmacy].join(' ').toLowerCase()
-      return hay.includes(q)
-    })
-  }, [campDoctors, search])
+    if (q) {
+      list = list.filter((d) => {
+        const hay = [d.name, d.specialties.join(' '), d.hospital, d.attachedPharmacy].join(' ').toLowerCase()
+        return hay.includes(q)
+      })
+    }
+    return list
+  }, [campDoctors, search, scheduleFilter, specialtyFilter])
 
   const selectedDoctors = useMemo(
     () => campDoctors.filter((d) => selected.includes(d.id)),
@@ -244,12 +276,45 @@ export function Visits() {
                   </div>
                 </div>
                 {camp && (
-                  <input
-                    className="picker-search"
-                    placeholder="Search doctors"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
+                  <>
+                    {openFilter && (
+                      <button
+                        type="button"
+                        className="chip-backdrop"
+                        aria-label="Close filters"
+                        onClick={() => setOpenFilter(null)}
+                      />
+                    )}
+                    <div className={`chips ${openFilter ? 'chips--open' : ''}`}>
+                      <FilterChip
+                        id="schedule"
+                        label="Schedule"
+                        options={scheduleOptions}
+                        selected={scheduleFilter}
+                        open={openFilter === 'schedule'}
+                        onOpenChange={setOpenFilter}
+                        onChange={(next) => {
+                          setScheduleTouched(true)
+                          setScheduleFilter(next)
+                        }}
+                      />
+                      <FilterChip
+                        id="specialty"
+                        label="Specialty"
+                        options={specialtyOptions}
+                        selected={specialtyFilter}
+                        open={openFilter === 'specialty'}
+                        onOpenChange={setOpenFilter}
+                        onChange={setSpecialtyFilter}
+                      />
+                    </div>
+                    <input
+                      className="picker-search"
+                      placeholder="Search doctors"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </>
                 )}
                 <div className="picker-pane">
                   {!camp && <p className="muted pad">Select a camp to see doctors</p>}
