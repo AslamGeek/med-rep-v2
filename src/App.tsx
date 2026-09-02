@@ -79,9 +79,7 @@ export default function App() {
       </header>
 
       <main>
-        {tab === 'directory' && (
-          <Directory searchOpen={directorySearchOpen} onSearchOpenChange={setDirectorySearchOpen} />
-        )}
+        {tab === 'directory' && <Directory searchOpen={directorySearchOpen} />}
         {tab === 'visits' && <Visits />}
       </main>
 
