@@ -233,6 +233,45 @@ main {
   border-style: dashed;
 }
 
+.filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+}
+
+.filter-trigger--on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.filter-trigger-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-sheet-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+.filter-sheet-foot .text-btn,
+.filter-sheet-foot .primary {
+  width: auto;
+  flex: 1;
+  margin-top: 0;
+}
+
 .invisible {
   visibility: hidden;
 }

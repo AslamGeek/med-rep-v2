@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Search, X } from 'lucide-react'
-import { db, newTemplateId, notifyDb } from '../db/database'
-import { useLiveQuery } from '../hooks/useLiveQuery'
-import type { Doctor, FilterTemplate, Prescriber, Product, SavedFilters, SettingList } from '../types'
-import { DoctorForm } from '../components/DoctorForm'
-import { FilterChip } from '../components/FilterChip'
+  const [editing, setEditing] = useState<Doctor | null | undefined>(undefined)
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
 const EMPTY_DOCTORS: Doctor[] = []
 const EMPTY_LISTS: SettingList[] = []
@@ -49,7 +46,6 @@ export function Directory({ searchOpen }: { searchOpen: boolean }) {
       products: [],
       prescribers: [],
     })
-    setOpenFilter(null)
   }
 
   function applyTemplate(t: FilterTemplate) {
@@ -61,7 +57,6 @@ export function Directory({ searchOpen }: { searchOpen: boolean }) {
       products: t.products,
       prescribers: t.prescribers,
     })
-    setOpenFilter(null)
   }
 
   async function saveTemplate() {
@@ -194,14 +189,6 @@ export function Directory({ searchOpen }: { searchOpen: boolean }) {
       </div>
 
       <>
-          {openFilter && (
-            <button
-              type="button"
-              className="chip-backdrop"
-              aria-label="Close filters"
-              onClick={() => setOpenFilter(null)}
-            />
-          )}
           <div className="templates-row">
             {templates.map((t) => (
               <div key={t.id} className="template-chip">
@@ -237,62 +224,45 @@ export function Directory({ searchOpen }: { searchOpen: boolean }) {
               Clear all
             </button>
           </div>
-          <div className={`chips ${openFilter ? 'chips--open' : ''}`}>
-        <FilterChip
-          id="area"
-          label="Area"
-          options={listMap.Areas ?? []}
-          selected={saved.areas}
-          open={openFilter === 'area'}
-          onOpenChange={setOpenFilter}
-          onChange={(areas) => patchFilters({ areas })}
-        />
-        <FilterChip
-          id="camp"
-          label="Camp"
-          options={listMap.Camps ?? []}
-          selected={saved.camps}
-          open={openFilter === 'camp'}
-          onOpenChange={setOpenFilter}
-          onChange={(camps) => patchFilters({ camps })}
-        />
-        <FilterChip
-          id="specialty"
-          label="Specialty"
-          options={listMap.Specialties ?? []}
-          selected={saved.specialties}
-          open={openFilter === 'specialty'}
-          onOpenChange={setOpenFilter}
-          onChange={(specialties) => patchFilters({ specialties })}
-        />
-        <FilterChip
-          id="call"
-          label="Call"
-          options={listMap['Call Schedule'] ?? []}
-          selected={saved.callSchedules}
-          open={openFilter === 'call'}
-          onOpenChange={setOpenFilter}
-          onChange={(callSchedules) => patchFilters({ callSchedules })}
-        />
-        <FilterChip
-          id="product"
-          label="Product"
-          options={products.map((p) => p.name)}
-          selected={saved.products}
-          open={openFilter === 'product'}
-          onOpenChange={setOpenFilter}
-          onChange={(next) => patchFilters({ products: next })}
-        />
-        <FilterChip
-          id="prescriber"
-          label="Prescriber"
-          options={['NRx', 'Rx']}
-          selected={saved.prescribers}
-          open={openFilter === 'prescriber'}
-          onOpenChange={setOpenFilter}
-          onChange={(next) => patchFilters({ prescribers: next as Prescriber[] })}
-        />
-          </div>
+          <button
+            type="button"
+            className={`filter-trigger ${hasActiveFilters ? 'filter-trigger--on' : ''}`}
+            onClick={() => setFilterSheetOpen(true)}
+          >
+            <SlidersHorizontal size={16} />
+            Filters
+            {hasActiveFilters && (
+              <span className="filter-trigger-count">
+                {saved.areas.length +
+                  saved.camps.length +
+                  saved.specialties.length +
+                  saved.callSchedules.length +
+                  saved.products.length +
+                  saved.prescribers.length}
+              </span>
+            )}
+          </button>
+          <FilterSheet
+            open={filterSheetOpen}
+            draftSource={{
+              prescribers: saved.prescribers,
+              specialties: saved.specialties,
+              camps: saved.camps,
+              areas: saved.areas,
+              callSchedules: saved.callSchedules,
+              products: saved.products,
+            }}
+            specialtyOptions={listMap.Specialties ?? []}
+            campOptions={listMap.Camps ?? []}
+            areaOptions={listMap.Areas ?? []}
+            callOptions={listMap['Call Schedule'] ?? []}
+            productOptions={products.map((p) => p.name)}
+            onClose={() => setFilterSheetOpen(false)}
+            onApply={(next) => {
+              patchFilters(next)
+              setFilterSheetOpen(false)
+            }}
+          />
       </>
 
       <ul className="cards">
