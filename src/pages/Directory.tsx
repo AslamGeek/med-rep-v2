@@ -190,3 +190,124 @@ export function Directory({ searchOpen }: { searchOpen: boolean }) {
         <Metric label="Hosp" value={metrics.hosp} />
         <Metric label="Pharm" value={metrics.pharm} />
       </div>
+
+      <>
+          <div className="templates-row">
+            {templates.map((t) => (
+              <div key={t.id} className="template-chip">
+                <button type="button" onClick={() => applyTemplate(t)}>
+                  {t.name}
+                </button>
+                <button
+                  type="button"
+                  className="template-chip-delete"
+                  aria-label={`Delete ${t.name}`}
+                  onClick={() => void deleteTemplate(t.id)}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="template-add"
+              disabled={!hasActiveFilters}
+              title={hasActiveFilters ? 'Save current filters as a template' : 'Set some filters first'}
+              onClick={() => void saveTemplate()}
+            >
+              <Plus size={14} />
+              Save filters
+            </button>
+            <button
+              type="button"
+              className="template-clear"
+              disabled={!hasActiveFilters}
+              onClick={clearAllFilters}
+            >
+              Clear all
+            </button>
+          </div>
+          <button
+            type="button"
+            className={`filter-trigger ${hasActiveFilters ? 'filter-trigger--on' : ''}`}
+            onClick={() => setFilterSheetOpen(true)}
+          >
+            <SlidersHorizontal size={16} />
+            Filters
+            {hasActiveFilters && (
+              <span className="filter-trigger-count">
+                {saved.areas.length +
+                  saved.camps.length +
+                  saved.specialties.length +
+                  saved.callSchedules.length +
+                  saved.products.length +
+                  saved.prescribers.length}
+              </span>
+            )}
+          </button>
+          <FilterSheet
+            open={filterSheetOpen}
+            draftSource={{
+              prescribers: saved.prescribers,
+              specialties: saved.specialties,
+              camps: saved.camps,
+              areas: saved.areas,
+              callSchedules: saved.callSchedules,
+              products: saved.products,
+            }}
+            specialtyOptions={listMap.Specialties ?? []}
+            campOptions={listMap.Camps ?? []}
+            areaOptions={listMap.Areas ?? []}
+            callOptions={listMap['Call Schedule'] ?? []}
+            productOptions={products.map((p) => p.name)}
+            onClose={() => setFilterSheetOpen(false)}
+            onApply={(next) => {
+              patchFilters({ ...next, prescribers: next.prescribers as Prescriber[] })
+              setFilterSheetOpen(false)
+            }}
+          />
+      </>
+
+      <ul className="cards">
+        {filtered.map((d) => (
+          <li key={d.id}>
+            <button type="button" className={`card ${d.prescriber === 'Rx' ? 'card--rx' : ''}`} onClick={() => setEditing(d)}>
+              <div className="card-top">
+                <strong>{d.name}</strong>
+                <span className={`badge ${d.prescriber === 'Rx' ? 'badge--rx' : ''}`}>
+                  {d.prescriber}
+                </span>
+              </div>
+              <p className="muted">
+                {[d.specialties.join(', '), d.area, d.camp, d.hospital]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
+              {d.prescriber === 'Rx' && d.prescribingProducts.length > 0 && (
+                <p className="products">{d.prescribingProducts.join(' · ')}</p>
+              )}
+            </button>
+          </li>
+        ))}
+        {filtered.length === 0 && <p className="muted pad">No doctors match</p>}
+      </ul>
+
+      <button type="button" className="fab" onClick={() => setEditing(null)} aria-label="Add doctor">
+        <Plus size={24} />
+      </button>
+
+      {editing !== undefined && (
+        <DoctorForm doctor={editing} onClose={() => setEditing(undefined)} />
+      )}
+    </section>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="metric">
+      <span>{value}</span>
+      {label}
+    </div>
+  )
+}
