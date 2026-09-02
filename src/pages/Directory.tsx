@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Plus, Search, X } from 'lucide-react'
+import { Plus, Search, X } from 'lucide-react'
 import { db, newTemplateId, notifyDb } from '../db/database'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import type { Doctor, FilterTemplate, Prescriber, Product, SavedFilters, SettingList } from '../types'
@@ -22,13 +22,7 @@ const emptyFilters: SavedFilters = {
   prescribers: [],
 }
 
-export function Directory({
-  searchOpen,
-  onSearchOpenChange,
-}: {
-  searchOpen: boolean
-  onSearchOpenChange: (open: boolean) => void
-}) {
+export function Directory({ searchOpen }: { searchOpen: boolean }) {
   const doctors = useLiveQuery(() => db.doctors.toArray(), []) ?? EMPTY_DOCTORS
   const lists = useLiveQuery(() => db.settingLists.toArray(), []) ?? EMPTY_LISTS
   const products = useLiveQuery(() => db.products.toArray(), []) ?? EMPTY_PRODUCTS
@@ -36,8 +30,6 @@ export function Directory({
   const templates = useLiveQuery(() => db.filterTemplates.toArray(), []) ?? EMPTY_TEMPLATES
   const [editing, setEditing] = useState<Doctor | null | undefined>(undefined)
   const [openFilter, setOpenFilter] = useState<string | null>(null)
-  const [savingTemplate, setSavingTemplate] = useState(false)
-  const [templateName, setTemplateName] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const hasActiveFilters =
@@ -61,8 +53,28 @@ export function Directory({
   }
 
   async function saveTemplate() {
-    const name = templateName.trim()
-    if (!name) return
+    const parts: string[] = []
+    if (saved.areas.length) parts.push(`Area: ${saved.areas.join('/')}`)
+    if (saved.camps.length) parts.push(`Camp: ${saved.camps.join('/')}`)
+    if (saved.specialties.length) parts.push(`Specialty: ${saved.specialties.join('/')}`)
+    if (saved.callSchedules.length) parts.push(`Call: ${saved.callSchedules.join('/')}`)
+    if (saved.products.length) parts.push(`Product: ${saved.products.join('/')}`)
+    if (saved.prescribers.length) parts.push(`Prescriber: ${saved.prescribers.join('/')}`)
+    if (parts.length === 0) return
+    const name = parts.join(' + ')
+
+    // Don't create a duplicate if this exact combo is already saved.
+    const isDuplicate = templates.some(
+      (t) =>
+        t.areas.join() === saved.areas.join() &&
+        t.camps.join() === saved.camps.join() &&
+        t.specialties.join() === saved.specialties.join() &&
+        t.callSchedules.join() === saved.callSchedules.join() &&
+        t.products.join() === saved.products.join() &&
+        t.prescribers.join() === saved.prescribers.join(),
+    )
+    if (isDuplicate) return
+
     await db.filterTemplates.put({
       id: newTemplateId(),
       name,
@@ -74,8 +86,6 @@ export function Directory({
       prescribers: saved.prescribers,
     })
     notifyDb()
-    setTemplateName('')
-    setSavingTemplate(false)
   }
 
   async function deleteTemplate(id: string) {
@@ -160,17 +170,6 @@ export function Directory({
               <X size={16} />
             </button>
           )}
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Close search"
-            onClick={() => {
-              setOpenFilter(null)
-              onSearchOpenChange(false)
-            }}
-          >
-            <X size={18} />
-          </button>
         </div>
       )}
 
@@ -208,47 +207,16 @@ export function Directory({
                 </button>
               </div>
             ))}
-            {savingTemplate ? (
-              <form
-                className="template-save-form"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  void saveTemplate()
-                }}
-              >
-                <input
-                  autoFocus
-                  placeholder="Template name"
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                />
-                <button type="submit" className="icon-btn" aria-label="Save template">
-                  <Check size={16} />
-                </button>
-                <button
-                  type="button"
-                  className="icon-btn"
-                  aria-label="Cancel"
-                  onClick={() => {
-                    setSavingTemplate(false)
-                    setTemplateName('')
-                  }}
-                >
-                  <X size={16} />
-                </button>
-              </form>
-            ) : (
-              <button
-                type="button"
-                className="template-add"
-                disabled={!hasActiveFilters}
-                title={hasActiveFilters ? 'Save current filters as a template' : 'Set some filters first'}
-                onClick={() => setSavingTemplate(true)}
-              >
-                <Plus size={14} />
-                Save filters
-              </button>
-            )}
+            <button
+              type="button"
+              className="template-add"
+              disabled={!hasActiveFilters}
+              title={hasActiveFilters ? 'Save current filters as a template' : 'Set some filters first'}
+              onClick={() => void saveTemplate()}
+            >
+              <Plus size={14} />
+              Save filters
+            </button>
           </div>
           <div className={`chips ${openFilter ? 'chips--open' : ''}`}>
         <FilterChip
