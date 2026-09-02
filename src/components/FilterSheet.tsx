@@ -147,14 +147,14 @@ function FilterGroup({
   return (
     <fieldset>
       <legend>{label.toUpperCase()}</legend>
-      <div className="pill-row">
+      <div className="filter-pill-row">
         {options.map((opt) => {
           const on = selected.includes(opt)
           return (
             <button
               key={opt}
               type="button"
-              className={`pill ${on ? 'on' : ''}`}
+              className={`filter-pill ${on ? 'on' : ''}`}
               onClick={() => onToggle(opt)}
             >
               {opt}
