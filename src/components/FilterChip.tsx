@@ -1,5 +1,6 @@
+
 import { useMemo } from 'react'
-import { Check, ChevronDown } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 type Props = {
   id: string
@@ -35,10 +36,10 @@ export function FilterChip({
         onClick={() => onOpenChange(open ? null : id)}
       >
         {title}
-        <ChevronDown size={14} />
+        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
       </button>
       {open && (
-        <div className="chip-menu" role="listbox">
+        <div className="chip-options" role="listbox">
           {options.length === 0 && <p className="muted">No options yet</p>}
           {options.map((opt) => {
             const on = selected.includes(opt)
@@ -46,18 +47,17 @@ export function FilterChip({
               <button
                 key={opt}
                 type="button"
-                className={`chip-option ${on ? 'on' : ''}`}
+                className={`chip ${on ? 'chip--on' : ''}`}
                 onClick={() =>
                   onChange(on ? selected.filter((s) => s !== opt) : [...selected, opt])
                 }
               >
-                <Check size={16} className={on ? '' : 'invisible'} />
                 {opt}
               </button>
             )
           })}
           {count > 0 && (
-            <button type="button" className="text-btn" onClick={() => onChange([])}>
+            <button type="button" className="chip chip-clear" onClick={() => onChange([])}>
               Clear
             </button>
           )}

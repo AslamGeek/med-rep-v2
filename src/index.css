@@ -206,35 +206,21 @@ main {
   color: var(--text);
 }
 
-.chip-menu {
-  position: absolute;
-  z-index: 9;
-  top: 100%;
-  left: 0;
-  min-width: 220px;
-  max-height: 240px;
-  overflow: auto;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 8px;
-}
-
-.chip-option {
+.chip-options {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   width: 100%;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  background: none;
-  border: 0;
-  text-align: left;
-  border-radius: 8px;
+  margin-top: 8px;
 }
 
-.chip-option.on {
-  background: var(--accent-soft);
+.chip-options .chip {
+  font-size: 13px;
+}
+
+.chip-clear {
+  color: var(--danger);
+  border-style: dashed;
 }
 
 .invisible {
@@ -957,3 +943,16 @@ legend {
   opacity: 0.6;
 }
 
+.template-clear {
+  border: 0;
+  background: none;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+.template-clear:disabled {
+  color: var(--muted);
+  opacity: 0.6;
+}

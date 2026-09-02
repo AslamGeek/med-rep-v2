@@ -40,6 +40,18 @@ export function Directory({ searchOpen }: { searchOpen: boolean }) {
     saved.products.length > 0 ||
     saved.prescribers.length > 0
 
+  function clearAllFilters() {
+    patchFilters({
+      areas: [],
+      camps: [],
+      specialties: [],
+      callSchedules: [],
+      products: [],
+      prescribers: [],
+    })
+    setOpenFilter(null)
+  }
+
   function applyTemplate(t: FilterTemplate) {
     patchFilters({
       areas: t.areas,
@@ -216,6 +228,14 @@ export function Directory({ searchOpen }: { searchOpen: boolean }) {
             >
               <Plus size={14} />
               Save filters
+            </button>
+            <button
+              type="button"
+              className="template-clear"
+              disabled={!hasActiveFilters}
+              onClick={clearAllFilters}
+            >
+              Clear all
             </button>
           </div>
           <div className={`chips ${openFilter ? 'chips--open' : ''}`}>
