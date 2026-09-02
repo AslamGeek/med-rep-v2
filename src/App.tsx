@@ -1,21 +1,18 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
-import { BookUser, CalendarDays, Settings } from 'lucide-react'
-import { StatusDot } from './components/StatusDot'
+import { useEffect, useState } from 'react'
+import { BookUser, CalendarDays } from 'lucide-react'
+import { ThemeToggle } from './components/ThemeToggle'
 import { Directory } from './pages/Directory'
 import { Visits } from './pages/Visits'
 import { ensureDefaults } from './db/database'
 import { startSyncListeners } from './sync/engine'
 import { applyTheme, storedTheme } from './lib/dates'
 
-const SettingsPage = lazy(() =>
-  import('./pages/Settings').then((m) => ({ default: m.SettingsPage })),
-)
-
-type Tab = 'directory' | 'visits' | 'settings'
+type Tab = 'directory' | 'visits'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('directory')
   const [ready, setReady] = useState(false)
+  const [barsHidden, setBarsHidden] = useState(false)
 
   useEffect(() => {
     applyTheme(storedTheme())
@@ -23,6 +20,33 @@ export default function App() {
       setReady(true)
       startSyncListeners()
     })
+  }, [])
+
+  useEffect(() => {
+    let lastY = window.scrollY
+    let ticking = false
+
+    function onScroll() {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        const y = window.scrollY
+        const delta = y - lastY
+        // Ignore tiny jitters, and always show the bars near the top of the page.
+        if (y < 40) {
+          setBarsHidden(false)
+        } else if (delta > 4) {
+          setBarsHidden(true)
+        } else if (delta < -4) {
+          setBarsHidden(false)
+        }
+        lastY = y
+        ticking = false
+      })
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   if (!ready) {
@@ -35,22 +59,17 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="top">
+      <header className={`top ${barsHidden ? 'hide' : ''}`}>
         <h1>MedRep</h1>
-        <StatusDot />
+        <ThemeToggle />
       </header>
 
       <main>
         {tab === 'directory' && <Directory />}
         {tab === 'visits' && <Visits />}
-        {tab === 'settings' && (
-          <Suspense fallback={<p className="muted pad">Loading</p>}>
-            <SettingsPage />
-          </Suspense>
-        )}
       </main>
 
-      <nav className="tabbar">
+      <nav className={`tabbar ${barsHidden ? 'hide' : ''}`}>
         <button type="button" className={tab === 'directory' ? 'on' : ''} onClick={() => setTab('directory')}>
           <BookUser size={22} />
           Directory
@@ -58,10 +77,6 @@ export default function App() {
         <button type="button" className={tab === 'visits' ? 'on' : ''} onClick={() => setTab('visits')}>
           <CalendarDays size={22} />
           Visits
-        </button>
-        <button type="button" className={tab === 'settings' ? 'on' : ''} onClick={() => setTab('settings')}>
-          <Settings size={22} />
-          Settings
         </button>
       </nav>
     </div>

@@ -42,8 +42,8 @@ body {
   font: 16px/1.4 var(--sans);
   background: var(--bg);
   color: var(--text);
+  overflow-x: hidden;
 }
-
 #root {
   min-height: 100svh;
 }
@@ -58,6 +58,8 @@ textarea {
 
 .app {
   min-height: 100svh;
+  max-width: 100vw;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   max-width: 480px;
@@ -74,6 +76,12 @@ textarea {
   top: 0;
   background: var(--bg);
   z-index: 5;
+  transform: translateY(0);
+  transition: transform 0.2s ease;
+}
+
+.top.hide {
+  transform: translateY(-100%);
 }
 
 .top h1 {
@@ -311,12 +319,17 @@ main {
   position: sticky;
   bottom: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   background: var(--surface);
   border-top: 1px solid var(--line);
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  transform: translateY(0);
+  transition: transform 0.2s ease;
 }
 
+.tabbar.hide {
+  transform: translateY(100%);
+}
 .tabbar button {
   border: 0;
   background: none;
@@ -642,6 +655,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .list-block li {
@@ -650,8 +664,17 @@ textarea {
   justify-content: space-between;
 }
 
+.list-block li span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .add-row input {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .status-dot {
@@ -863,4 +886,15 @@ legend {
 .history-item--holiday .history-row {
   padding-left: 8px;
   padding-right: 8px;
+}
+
+.theme-toggle {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--text);
 }
