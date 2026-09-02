@@ -902,3 +902,74 @@ legend {
   align-items: center;
   gap: 8px;
 }
+
+.templates-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.template-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 4px 4px 4px 12px;
+}
+
+.template-chip button:first-child {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+}
+
+.template-chip-delete {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.template-add {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px dashed var(--line);
+  background: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.template-add:disabled {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.template-save-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 4px 2px 10px;
+  background: var(--surface);
+}
+
+.template-save-form input {
+  border: 0;
+  background: none;
+  font-size: 13px;
+  width: 120px;
+}

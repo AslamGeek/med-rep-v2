@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import type {
   Doctor,
+  FilterTemplate,
   OutboxItem,
   Product,
   SavedFilters,
@@ -18,6 +19,7 @@ class MedRepDB extends Dexie {
   products!: Table<Product, string>
   settingLists!: Table<SettingList, SettingKey>
   savedFilters!: Table<SavedFilters, string>
+  filterTemplates!: Table<FilterTemplate, string>
   meta!: Table<MetaRow, string>
   outbox!: Table<OutboxItem, number>
 
@@ -31,6 +33,11 @@ class MedRepDB extends Dexie {
       savedFilters: 'id',
       meta: 'key',
       outbox: '++id, action, createdAt',
+    })
+    // Saved filter templates (e.g. "Camp + Prescriber") are device-local —
+    // they don't need to sync to Sheets, so they're a plain new table.
+    this.version(2).stores({
+      filterTemplates: 'id, name',
     })
   }
 }
@@ -89,4 +96,8 @@ export function newProductId() {
 
 export function newVisitId() {
   return `V${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+}
+
+export function newTemplateId() {
+  return `T${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 }

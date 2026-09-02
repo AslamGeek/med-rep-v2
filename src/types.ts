@@ -71,6 +71,17 @@ export type SavedFilters = {
   prescribers: Prescriber[]
 }
 
+export type FilterTemplate = {
+  id: string
+  name: string
+  areas: string[]
+  camps: string[]
+  specialties: string[]
+  callSchedules: string[]
+  products: string[]
+  prescribers: Prescriber[]
+}
+
 export type OutboxItem = {
   id?: number
   action:
