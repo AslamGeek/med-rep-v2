@@ -160,6 +160,17 @@ export function Directory({
               <X size={16} />
             </button>
           )}
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Close search"
+            onClick={() => {
+              setOpenFilter(null)
+              onSearchOpenChange(false)
+            }}
+          >
+            <X size={18} />
+          </button>
         </div>
       )}
 
